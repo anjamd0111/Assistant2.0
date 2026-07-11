@@ -22,6 +22,12 @@ app.post('/api/full-chat', async (req, res) => {
     const selectedMood = mood || 'friendly';
     const textResult = await processMessage(message, lang, userName || 'दोस्त');
     const voiceMusic = voice.createVoiceWithMusic(textResult.reply, lang, selectedMood);
+    // proxy the voice URL through our own /api/stream-voice instead of handing
+    // out the raw Google Translate TTS link — that link 400s for any client
+    // that doesn't send browser-like headers (e.g. a server-side bot), so
+    // routing everyone through our own endpoint (which sets those headers)
+    // makes this reliable for every consumer, not just browsers.
+    voiceMusic.voice.url = `${req.protocol}://${req.get('host')}/api/stream-voice?text=${encodeURIComponent(textResult.reply)}&lang=${lang}&mood=${selectedMood}`;
     res.json({ ...textResult, ...voiceMusic });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -43,7 +49,10 @@ app.post('/api/voice-music', (req, res) => {
   try {
     const { text, language, mood } = req.body;
     if (!text) return res.status(400).json({ error: 'Text required' });
-    const result = voice.createVoiceWithMusic(text, language || 'hi', mood || 'friendly');
+    const lang = language || 'hi';
+    const selectedMood = mood || 'friendly';
+    const result = voice.createVoiceWithMusic(text, lang, selectedMood);
+    result.voice.url = `${req.protocol}://${req.get('host')}/api/stream-voice?text=${encodeURIComponent(text)}&lang=${lang}&mood=${selectedMood}`;
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: 'Voice generation failed' });
@@ -51,9 +60,9 @@ app.post('/api/voice-music', (req, res) => {
 });
 
 app.get('/api/stream-voice', async (req, res) => {
-  const { text, lang } = req.query;
+  const { text, lang, mood } = req.query;
   if (!text) return res.status(400).json({ error: 'Text required' });
-  await voice.streamVoice(text, lang || 'hi', res);
+  await voice.streamVoice(text, lang || 'hi', res, mood || 'friendly');
 });
 
 app.get('/music-player', (req, res) => {
@@ -100,6 +109,27 @@ app.post('/api/plugin-execute', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: 'Plugin failed' });
   }
+});
+
+app.get('/api/docs', (req, res) => {
+  res.json({
+    name: '✦ 𝙰𝙽𝙹𝙰𝙽 ʬ 合 API',
+    endpoints: [
+      { method: 'POST', path: '/api/full-chat', body: { message: 'string (required)', language: 'hi|bn|en|auto', userName: 'string', mood: 'friendly|romantic|happy|sad|angry|professional|emotional|sarcastic' }, description: 'Text in, get reply text + voice URL + background music URL' },
+      { method: 'POST', path: '/api/chat', body: { message: 'string (required)', language: 'string', userName: 'string' }, description: 'Text in, get reply text only (no voice/music)' },
+      { method: 'POST', path: '/api/voice-music', body: { text: 'string (required)', language: 'string', mood: 'string' }, description: 'Given text, generate voice URL + matching background music URL' },
+      { method: 'GET', path: '/api/stream-voice', query: { text: 'string (required)', lang: 'string', mood: 'string' }, description: 'Streams the generated voice as audio/mpeg directly' },
+      { method: 'GET', path: '/music-player', query: { mood: 'string' }, description: 'HTML page with an animated music player for a given mood' },
+      { method: 'GET', path: '/api/play-music/:mood', description: 'Redirects to the raw music file URL for a mood' },
+      { method: 'GET', path: '/api/moods', description: 'List of available moods' },
+      { method: 'GET', path: '/api/languages', description: 'List of supported languages' },
+      { method: 'GET', path: '/api/music-library', description: 'List of all background music tracks' },
+      { method: 'GET', path: '/api/plugins', description: 'List of available plugins (weather, news, calculator, music, custom)' },
+      { method: 'POST', path: '/api/plugin-execute', body: { pluginId: 'string (required)', message: 'string (required)', language: 'string' }, description: 'Run a specific plugin directly' },
+      { method: 'GET', path: '/health', description: 'Health check' },
+      { method: 'GET', path: '/api/docs', description: 'This list' },
+    ],
+  });
 });
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));

@@ -95,18 +95,21 @@ function createVoiceWithMusic(text, lang = 'hi', mood = 'friendly', options = {}
   };
 }
 
-async function streamVoice(text, lang, res) {
+async function streamVoice(text, lang, res, mood) {
   try {
     const response = await axios({
       method: 'get',
-      url: generateVoiceUrl(text, lang),
+      url: generateVoiceUrl(text, lang, mood),
       responseType: 'stream',
-      headers: { 'User-Agent': 'Mozilla/5.0' }
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Referer': 'https://translate.google.com/'
+      }
     });
     res.set('Content-Type', 'audio/mpeg');
     response.data.pipe(res);
   } catch (err) {
-    res.redirect(generateVoiceUrl(text, lang));
+    res.redirect(generateVoiceUrl(text, lang, mood));
   }
 }
 

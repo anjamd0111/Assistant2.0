@@ -1,2 +1,2 @@
-# Assistant2.0
-Euniq thinker
+# AiAssistant
+𝐋𝐞𝐯𝐞𝐥 𝐔𝐩🎏

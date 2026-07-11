@@ -1,7 +1,7 @@
 {
   "name": "anjan-ai",
   "version": "7.0.0",
-  "description": "✦ 𝙰𝙽𝙹𝙰𝙽 ʬ 合 — Indian Female Voice AI with Background Music",
+  "description": "ANJAN AI API — Gemini-powered text/voice chat with voice replies",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -9,7 +9,8 @@
   "dependencies": {
     "express": "^4.21.0",
     "cors": "^2.8.5",
-    "axios": "^1.7.0"
+    "axios": "^1.7.0",
+    "dotenv": "^16.4.5"
   },
   "engines": {
     "node": ">=16.0.0"
